@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <title>Tarea de Percepción Categórica</title>
+<style>
+  body{
+    font: 14px Helvetica, Arial, sans-serif;  
+    background-color: #BBB;
+    color: #222;
+  }
+  #all{
+    width: 600px;
+    margin: 50px auto;
+    text-align: center;
+  }
+  a {
+    text-decoration: none;
+    color: #06a;
+  }
+  a:hover{
+    text-decoration: underline;
+  }
+  a.btn {
+    font-weight: bold;
+  }
+  .hidden{
+    display: none;
+  }
+  .btn{
+    padding: 5px 10px;
+    font-size: 20px;
+    font-weight: bold;
+    text-decoration: none;
+    color: black;
+    border: 2px solid #fff;
+    border-bottom: 2px solid #555;
+    border-right  : 2px solid #555;
+    margin: 5px;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+  .btn:hover{
+    text-decoration: none;
+    background: #ccc;
+  }
+  .disabled{
+    cursor: default;
+    color: #777;
+    /*border: 2px solid #fff;
+    border-top: 2px solid #555;
+    border-left: 2px solid #555;*/
+  }
+  h1{
+    margin-bottom: 2rem;
+  }
+  p{
+    margin: 1.5rem 0;
+  }
+  canvas {
+    display: none;
+    margin: 1rem 0;
+    border-radius: 8px;
+  }
+  #help1, #help2 {
+    text-align: left;
+    margin-bottom: 4em;
+  }
+  #part1, #part2{
+    margin: 3em 0;
+  }
+  #about {
+    text-align: left;
+    margin-top: 5em;
+  }
+</style>
+</head>
+<body>
+<audio id="player"></audio>
+<div id="all">
+  <h1>Tarea de Percepción Categórica</h1>
+  <div id="help1">
+    <h2>Parte 1: Tarea de Identificación</h2>
+    <p>A continuación, escucharás los sonidos del continuo acústico. <br>Tu tarea consistirá en decidir, pulsando sobre el botón correspondiente, si identificas el sonido como "ba", "da" o "ga".</p>
+    <p>Un contador te indicará cuántos sonidos restan para acabar.<br>Cuando finalices, se mostrará la gráfica correspondiente a la función de identificación.</p>
+    <p>Pulsa el botón "Empezar" cuando desees iniciar la tarea.</p>
+  </div>
+
+  <div id="help2" class="hidden">
+    <h2>Parte 2: Tarea de discriminación.</h2>
+    <p>A continuación, escucharás pares de sonidos seleccionados del continuo acústico.<br>
+    Tu misión consistirá en decidir, pulsando sobre el botón correspondiente, si esos sonidos son iguales o distintos.</p>
+    <p>Un contador te indicará cuántos pares de sonidos restan para acabar.<br>Cuando finalices, se mostrará la gráfica correspondiente a la función de discriminación.</p>
+    <p>Pulsa el botón "Empezar" cuando desees iniciar la tarea.</p>
+  </div>
+
+  <p id="loading" style="display: none;">Cargando...</p>
+  <p id="start1" class="hidden"><a href="javascript:;" class="btn" onclick="start1()">Empezar</a></p>
+  <p id="start2" class="hidden"><a href="javascript:;" class="btn" onclick="start2()">Empezar</a></p>
+  <p id="part1" class="hidden">
+    <a href="javascript:;" class="btn disabled" onclick="answer1(&#39;ba&#39;)">Ba</a>
+    <a href="javascript:;" class="btn disabled" onclick="answer1(&#39;da&#39;)">Da</a>
+    <a href="javascript:;" class="btn disabled" onclick="answer1(&#39;ga&#39;)">Ga</a>
+  </p>
+  <p id="part2" class="hidden">
+    <a href="javascript:;" class="btn disabled" onclick="answer2(&#39;same&#39;)">Iguales</a>
+    <a href="javascript:;" class="btn disabled" onclick="answer2(&#39;diff&#39;)">Distintos</a>
+  </p>
+  <canvas id="chart1" width="500" height="300"></canvas>
+  <canvas id="chart2" width="500" height="300"></canvas>
+  <p id="save" class="hidden"><a href="javascript:;" onclick="saveImages(this)">Haz click aquí</a> para guardar con tu nombre y apellidos tus resultados</p>
+  <p id="continue" class="hidden"><br><a href="javascript:;" class="btn" onclick="continue2()">Tarea de discriminación</a></p>
+  <p id="end" class="hidden"><br><a href="javascript:;" class="btn" onclick="end()">Resultados combinados</a></p>
+  <p id="countdown"></p>
+  <p id="about" class="hidden">Adaptación en HTML5 realizada en el Grupo PCC a partir de la simulación original del Dr. Anders Eriksson (Universidad de Gotemburgo).</p>
+  <p id="profeclick" class="hidden">Cuando te indique el profesor, <a href="javascript:;" onclick="finalEnd()">haz click aquí</a> para obtener información sobre cómo realizar la parte voluntaria de la práctica.</p>
+  <div id="online" class="hidden"><br>Anota la siguiente dirección web para realizar la simulación de forma individual:
+    <h3>http://bit.do/percepcion</h3>
+  </div>
+</div>
+
+<script>
+  
+var trials1, trials2, answers1, answers2, correct1, correct2;
+var canAnswer= false, firstPlay = true;
+
+var sounds= ['ba','ba','ba','ba','ba','ba','ba','da','da','da','da','da','da','da','da','ga','ga','ga','ga','ga','ba','ba','ba','ba','ba','ba','ba','da','da','da','da','da','da','da','da','ga','ga','ga','ga','ga'];
+
+function genTrials(){
+  var pool= [];
+
+  //trials1
+  for (var i = 0; i < 20; i++) {
+    pool.push(i);
+    pool.push(i);
+  }
+  
+  trials1= [];
+  for (var i = 0; i < 40; i++) {
+    var r= Math.floor(Math.random() * pool.length);
+    trials1.push(pool[r]);
+    pool.splice(r, 1)
+  }
+
+  //trials2
+  //cada item x en trials2 significa el par (x, x+1)
+  var pool= [];
+  for (var i = 0; i < 19; i++) {
+    pool.push(i);
+    pool.push(i);
+  }
+  trials2 = [];
+
+  for (var i = 0; i < 19 * 2; i++) {
+    var r= Math.floor(Math.random() * pool.length);
+    trials2.push(pool[r]);
+    pool.splice(r, 1)
+  }
+
+  answers1 = [];
+  answers2 = [];
+  correct1 = [];
+  correct2 = [];
+  canAnswer= false;
+}
+
+function $(id){ return document.getElementById(id); }
+
+function loadEnd(){
+  genTrials();
+  show('start1');
+  hide('loading');
+}
+
+function start1(){
+  hide('start1');
+  show('part1');
+  show('countdown');
+  part1step= 0;
+  setTimeout(next1, 100);
+}
+
+function continue2(){
+  hide('chart1');
+  hide('help1');
+  show('help2');
+  show('start2');
+  hide('continue');
+  hide('countdown');
+}
+
+function start2(){
+  hide('start2');
+  show('part2');
+  show('countdown');
+  part2step= 0;
+  setTimeout(next2, 100);
+}
+
+function end(){
+  hide('help1');
+  hide('help2');
+  hide('part1');
+  hide('part2');
+  hide('start1');
+  hide('start2');
+  hide('end');
+  hide('countdown');
+  show('chart1');
+  show('chart2');
+  show('save');
+  if (window.location.protocol.substr(0,4) !== 'file') {
+    show('about');
+  }
+  else{
+    show('profeclick');
+  }
+}
+
+function finalEnd(){
+  hide('chart1');
+  hide('chart2');
+  hide('save');
+  hide('profeclick');
+  show('online');
+}
+
+
+function saveImages(link){
+  var name = prompt('Nombre y apellidos:', 'nombre');
+  if (!name) return;
+
+  name = name.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑüÜ1234567890\ ]/g, '_');
+  name = name.replace(/_+/g, '_');
+
+  var c0 = document.createElement('canvas');
+  var c1 = $('chart1');
+  var c2 = $('chart2');
+  c0.width = c1.width;
+  c0.height = c1.height + c2.height;
+
+  var c = c0.getContext('2d');
+  c.drawImage(c1, 0, 0);
+  c.drawImage(c2, 0, c1.height);
+  
+  if (c0.msToBlob){
+    window.navigator.msSaveBlob(c0.msToBlob(), name+'.png');
+  }
+  else {
+    link.href = c0.toDataURL();
+    link.download = name+'.png';
+  }
+}
+
+
+function answer1(a){
+  if (!canAnswer) return;
+  answers1[part1step]= a;
+  part1step++;
+  if (part1step >= trials1.length){
+    hide('part1');
+    hide('countdown');
+    show('continue')
+    calculate1();
+    drawChart(1);
+  }
+  else{
+    //next one
+    disableAnswer();    
+    setTimeout(next1, 100);
+  }
+}
+
+function answer2(a){
+  if (!canAnswer) return;
+  answers2[part2step]= a;
+  part2step++;
+  if (part2step >= trials2.length){
+    hide('part2');
+    hide('countdown');
+    show('end');
+    calculate2();
+    drawChart(2);
+  }
+  else{
+    //next one
+    disableAnswer();    
+    setTimeout(next2, 100);
+  }
+}
+
+
+function disableAnswer(){
+  canAnswer= false;
+  var btns= document.getElementsByClassName('btn');
+  for (var i = 0; i < btns.length; i++) {
+    addClass(btns[i], 'disabled');
+  }
+}
+
+function enableAnswer(){
+  canAnswer= true;
+  var btns= document.getElementsByClassName('btn');
+  for (var i = 0; i < btns.length; i++) {
+    removeClass(btns[i], 'disabled');
+  }
+}
+
+function next1(){
+  firstPlay = false; //siepmre false, esta var es para el trial2
+  play(trials1[part1step]);
+  var html = '';
+  if (modoProfe) html += sounds[trials1[part1step]] + ' (' + pad2(trials1[part1step]+1) + ') <br><br>';
+  html += (trials1.length - 1 - part1step)+' sonidos restantes';
+  $('countdown').innerHTML = html; 
+}
+
+function next2(){
+  var item = trials2[part2step];
+  firstPlay = true;
+  play(item);
+  setTimeout(function(){ play(item + 1) }, 1000);
+
+  var html = '';
+  if (modoProfe) html += 
+    sounds[item] + '(' + pad2(item + 1) + '), ' + 
+    sounds[item + 1] + '(' + pad2(item + 2) + ')<br><br>';
+  html += (trials2.length - 1 - part2step)+' pares de sonidos restantes';
+  $('countdown').innerHTML = html; 
+}
+
+
+function pad2(v){ return v<10?'0'+v:''+v; }
+    
+var player = $('player');
+
+player.onended = function() {
+  if (firstPlay) firstPlay = false;
+  else enableAnswer();
+}
+
+
+function play(s) {
+ if (player.canPlayType('audio/ogg')) {
+    player.src = 'sounds/'+pad2(s+1)+'.ogg';
+  }
+  else {
+    player.src = 'sounds/'+pad2(s+1)+'.mp3';
+  }
+  player.play();
+}
+    
+
+function preloadAudio(url) {
+    var audio = new Audio();
+    audio.addEventListener('canplaythrough', loadedAudio, false);
+    if (audio.canPlayType('audio/ogg')) {
+      audio.src = url + '.ogg';
+    }
+    else {
+      audio.src = url + '.mp3';
+    }
+}
+
+var loaded = 0;
+function loadedAudio() {
+    loaded++;
+    if (loaded == 20){
+      loadEnd();
+    }
+}
+
+function calculate1 () {
+  correct1['ba'] = [];
+  correct1['da'] = [];
+  correct1['ga'] = [];
+  for (var i = 0; i < 20; i++) {
+    correct1['ba'][i]= 0;
+    correct1['da'][i]= 0;
+    correct1['ga'][i]= 0;
+  }
+  for (var i = 0; i < trials1.length; i++) {
+    //if (sounds[trials1[i]] == answers1[i]) 
+      correct1[answers1[i]][trials1[i]] ++;
+  }
+}
+
+function calculate2 () {
+  correct2 = [];
+  for (var i = 0; i < 20 - 1; i++) {
+    correct2[i] = 0;
+    correct2[i] = 0;
+    correct2[i] = 0;
+  }
+  for (var i = 0; i < trials2.length; i++) {
+    if (answers2[i]=='diff') correct2[trials2[i]]++;
+  }
+}
+
+// chart colors
+var black = '#444', red = '#a00', blue= '#03c';
+var series_color= {'ba': black, 'da': red, 'ga': blue};
+
+function drawChart(which) {
+  var can = $('chart'+which);
+  show('chart'+which);
+
+  hide('help1');
+  hide('help2');
+
+  var c = can.getContext('2d');
+  var W = 600, H = 400;
+  var x0 = 60, y0 = 60, w = W - 90, h = H - 120;
+
+  can.width = W;
+  can.height= H;
+
+  c.strokeStyle = black;
+  c.fillStyle = '#ccc';
+  c.fillRect(0, 0, W, H);
+  c.fillStyle = '#FFF';
+  c.fillRect(x0-10, y0-10, w+20, h+20);
+  c.fillStyle = black;
+  c.font= "12px Arial";
+
+
+  //horizontal axis
+  c.textAlign="center";
+  var numSounds = 20;
+  for (var i = 0; i < numSounds; i++){
+    var x = Math.floor(x0+i/(numSounds-1)*w);
+    c.fillText(i+1, x, y0+h+30);
+    line(c, x, y0+h+10, x, y0+h+15, black);
+  }
+  line(c, x0, y0+h+10, x0+w, y0+h+10, black);
+  c.fillText("Nº sonido", W/2, H-y0/5);
+
+  //vertical axis
+  c.textAlign="end";
+  for (var i in [0,1,2,3,4]){
+    var y = y0 + i/4 * h;
+    c.fillText(Math.floor((4-i)/4*100), x0-15, y0+5+i/4*(h));
+    line(c, x0-15, y, x0-10, y, black);
+  }
+  line(c, x0-10, y0, x0-10, y0+h, black);
+
+  c.save();
+  c.translate(x0/3, y0+h/2);
+  c.rotate(-Math.PI/2);
+  c.textAlign = "center";
+  c.fillText("Porcentaje", 0, 0);
+  c.restore();
+
+  //legend
+  if (which==1) {
+    c.textAlign= 'left';
+    c.fillStyle = black;
+    dot(c, W/2-60, y0/2-4, 'ba');
+    c.fillText('ba', W/2-50, y0/2);
+    c.fillStyle = red;
+    dot(c, W/2-10, y0/2-4, 'da');
+    c.fillText('da', W/2, y0/2);
+    c.fillStyle = blue;
+    dot(c, W/2+40, y0/2-4, 'ga');
+    c.fillText('ga', W/2+50, y0/2);
+  }
+
+  //data
+/*
+  answers1 = ["ga","ga","ba","ga","ba","ba","ga","ba","da","ga","ga","da","ga","ba","da","ga","da","ba","ga","da","ga","ba","ga","da","ga","ba","ga","da","ga","ba","ga","da","ga","ba","ga","da","ga","ba","ga","da"];
+
+  calculate1();
+
+  answers2 = ["same", "diff", "same", "same", "same", "same", "same", "same", "same", "same", "same", "diff", "same", "diff", "same", "diff", "same", "diff", "same", "diff", "same", "same", "same", "same", "diff", "same", "same", "same", "same", "same", "diff", "diff", "same", "same", "same", "same", "same", "diff"];
+
+  calculate2();
+*/
+  var count = 20;
+
+  if (which == 1) {
+    var ss = ['ba', 'ga', 'da'];
+
+    for (var s in ss) {
+      //data lines
+      for (var i=1; i< count; i++) {
+        var x = Math.floor(x0 + i / (count - 1) * w);
+        var val = correct1[ss[s]][i]/2;
+        var prevval = correct1[ss[s]][i-1]/2;
+        c.globalAlpha = 0.7;
+        line(c, x-w/(count-1), y0 + h - prevval * h, x, y0 + h - val * h, series_color[ss[s]]);
+        c.globalAlpha = 1;
+      }
+      //data dots
+      for (var i=0; i< count; i++) {
+        var x = Math.floor(x0 + i / (count - 1) * w);
+        var y = y0 + h - correct1[ss[s]][i]/2 * h;
+        //circle(c, x, y, '#fff');
+        dot(c, x, y, ss[s]);
+      }
+    }
+  }
+  else {
+    //lines
+    for (var i = 2; i< count; i++){
+      var x = Math.floor(x0 + i / (count-1) * w);
+      var val = correct2[i-1]/2;
+      var prevval = correct2[i-2] / 2;
+      c.globalAlpha = 0.7;
+      line(c, x-w/(count-1), y0 + h - prevval * h, x, y0 + h - val * h, black);
+      c.globalAlpha = 1;
+    }
+    //dots
+    for (var i = 1; i< count; i++){
+      var x = Math.floor(x0 + i / (count-1) * w);
+      var y = y0 + h - correct2[i-1] / 2 * h;
+      console.log(y);
+      dot(c, x, y, 'ba');
+    }
+  }
+}
+
+function circle(c, x, y, col) {
+  c.fillStyle = col;
+  c.beginPath();
+  c.arc(x, y, 5, 0, Math.PI*2);
+  c.fill();
+}
+
+function dot(c, x, y, w){
+  var size = w=='da'?7:6, s2 = size/2;
+  var col = series_color[w];
+  switch(w){
+    case 'ba': c.fillStyle = col; c.fillRect(x-s2, y-s2, size, size); break;
+    case 'da': line(c, x-s2, y, x+s2, y, col); line(c, x, y-s2, x, y+s2, col); break;
+    case 'ga': line(c, x-s2, y-s2, x+s2, y+s2, col); line(c, x-s2, y+s2, x+s2, y-s2, col); break;
+  }
+}
+
+function line (c, x0, y0, x1, y1, col) {
+  c.strokeStyle = col;
+  c.beginPath();
+  c.moveTo(x0+.5, y0+.5);
+  c.lineTo(x1+.5, y1+.5);
+  c.stroke();
+}
+
+
+function addClass(el, classname){
+  if (!el) return;
+  if (el.classList)
+    el.classList.add(classname);
+  else
+    el.className+= ' ' + classname;
+}
+
+function removeClass(el, classname){
+  if (!el) return;
+  if (el.classList)
+    el.classList.remove(classname);
+  else{
+    if (el.className){
+      el.className = el.className.replace(new RegExp('(^|\\b)' + classname.split(' ').join('|') + '(\\b|$)', 'gi'), ' ');
+    }
+  }
+}
+
+function toggleClass(el, classname){
+  if (el.className.indexOf(classname) !== -1){
+    removeClass(el, classname);
+  }
+  else{
+    addClass(el, classname);
+  }
+}
+
+function show(el){
+  $(el).style.display= 'block';
+}
+
+function hide(el){
+  $(el).style.display= 'none';
+}
+
+
+
+</script>
+
+
+<script>
+  var modoProfe = window.location.hash=='#profe';
+  for (var i=1; i< 21; i++) { preloadAudio('sounds/'+pad2(i)); }
+</script>
+
+
+
+</body></html>
